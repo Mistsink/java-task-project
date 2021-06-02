@@ -1,20 +1,33 @@
 import javax.swing.*;
+import javax.swing.border.Border;
 import java.awt.*;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
 
 public class ViewFrame extends JFrame{
 
     private int canvasWidth;
     private int canvasHeight;
+    public boolean ready = false;
+    public ModalData.Type dataType = ModalData.Type.Default;
 
     public ViewFrame(String title, int canvasWidth, int canvasHeight){
 
         super(title);
 
+        System.out.println("ViewFrame - ready" + ready);
+
         this.canvasWidth = canvasWidth;
         this.canvasHeight = canvasHeight;
 
+        AlgoMenu menu = new AlgoMenu();
+//        setContentPane(canvas);
+        add(menu, BorderLayout.NORTH);
+
+        System.out.println("in ready make canvas");
         AlgoCanvas canvas = new AlgoCanvas();
-        setContentPane(canvas);
+        add(canvas, BorderLayout.CENTER);
+
 
         /**
          *  布局的自动整理，使 frame 大小调整为可以容纳 canvas 的适当大小
@@ -45,7 +58,10 @@ public class ViewFrame extends JFrame{
      * ModalData
      * 依赖数据
      */
-    private ModalData data;
+    private ModalData data = new ModalData(new int[0]);
+    public ModalData getData() {
+        return data;
+    }
 
     /**
      *  渲染函数
@@ -90,7 +106,7 @@ public class ViewFrame extends JFrame{
             /**
              *  具体逻辑控制 以及 视图绘制
              */
-            int w = canvasWidth / data.N();
+            int w = data.N() > 0 ? canvasWidth / data.N() : 1;
             VisUtil.setColor(g2d, VisUtil.LightBlue);
 
             for(int i = 0 ; i < data.N() ; i ++ ) {
@@ -119,6 +135,131 @@ public class ViewFrame extends JFrame{
         @Override
         public Dimension getPreferredSize(){
             return new Dimension(canvasWidth, canvasHeight);
+        }
+    }
+
+
+    private class AlgoMenu extends JPanel {
+
+        AlgoMenu() {
+            super();
+//            setLocationRelativeTo(this.getParent());
+//            setLocation(20,10);
+            setLayout(new BorderLayout());
+            JLabel title = new JLabel("请选择需要排序的数据类型：");
+            title.setBounds(20, 10, 200, 16);
+            add(title, BorderLayout.CENTER);
+
+            AlgoInput input = new AlgoInput();
+            add(input, BorderLayout.SOUTH);
+        }
+    }
+
+    private class AlgoInput extends JPanel {
+        private JTextArea textArea;
+        private final String PlaceHolder_u = "请用 , 来分隔数组的各数字(0 <= "+ canvasHeight +")";
+        private final String PlaceHolder_nu = "点击确认按钮查看排序动画";
+
+        AlgoInput () {
+            super();
+
+            setLayout(new FlowLayout(FlowLayout.LEFT));
+            setSize(canvasWidth, 40);
+
+            JComboBox comboBox = renderComboBox();
+            add(comboBox);
+
+            JPanel textArea = renderTextArea();
+            add(textArea);
+        }
+
+        private JComboBox renderComboBox () {
+            JComboBox comboBox = new JComboBox();
+            comboBox.addItem("默认随机生成");
+            comboBox.addItem("近乎有序生成");
+            comboBox.addItem("全值相等生成");
+            comboBox.addItem("用户自定义输入");
+
+            comboBox.addItemListener((e)-> {
+                String tar = (String) e.getItem();
+                dataType = tar.equals("默认随机生成") ? ModalData.Type.Default
+                    :   tar.equals("近乎有序生成") ? ModalData.Type.NearlyOrdered
+                    :   tar.equals("全值相等生成") ? ModalData.Type.Identical
+                    : ModalData.Type.UserDefined;
+
+                if (dataType == ModalData.Type.UserDefined) {
+                    textArea.setEditable(true);
+                    textArea.setText(PlaceHolder_u);
+                } else {
+                    textArea.setEditable(false);
+                    textArea.setText(PlaceHolder_nu);
+                }
+
+            });
+            return comboBox;
+        }
+
+        private JPanel renderTextArea () {
+            JPanel textInput = new JPanel();
+            textInput.setLayout(new FlowLayout());
+
+            textArea = new JTextArea(PlaceHolder_nu, 1, canvasWidth / 20);
+            textArea.setLineWrap(true);
+            textArea.setEditable(false);
+            textArea.addFocusListener(new FocusListener() {
+                @Override
+                public void focusGained(FocusEvent e) {
+                    if (dataType == ModalData.Type.UserDefined)
+                        textArea.setText("");
+                }
+                @Override
+                public void focusLost(FocusEvent e) {
+                }
+            });
+
+            JScrollPane scrollPane = new JScrollPane(textArea);
+            scrollPane.setSize(canvasWidth / 2, 20);
+//            scrollPane.setBounds(0, 0, canvasWidth / 2, 16);
+
+            textInput.add(scrollPane, FlowLayout.LEFT);
+
+
+            JButton confirmBtn = new JButton("确认");
+            confirmBtn.addActionListener((e) -> {
+                if (dataType == ModalData.Type.UserDefined) {
+                    data = input2data(textArea.getText());
+                    if (data == null)
+                        return;
+                }
+
+                ready = true;
+            });
+
+            textInput.add(confirmBtn);
+
+            return textInput;
+        }
+
+
+        private ModalData input2data (String inputs) {
+            inputs = inputs.replace(" ", "");
+            String[] arr = inputs.split(",");
+            if (inputs.length() == 0 || arr.length == 0 || inputs.charAt(0) < '0' || inputs.charAt(0) > '9') {
+                textArea.setText("请输入正确的数组(0 <= "+ canvasHeight +")");
+                return null;
+            }
+
+            int[] num = new int[arr.length];
+            for (int i = 0; i < arr.length; i ++) {
+                int t = Integer.parseInt(arr[i]);
+                if (t <= 0) {
+                    textArea.setText("请输入非负整数(0 <= "+ canvasHeight +")");
+                    return null;
+                }
+                num[i] = t;
+            }
+
+            return new ModalData(num);
         }
     }
 }

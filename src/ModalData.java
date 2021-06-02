@@ -6,7 +6,8 @@ public class ModalData {
     public enum Type{
         Default,
         NearlyOrdered,
-        Identical
+        Identical,
+        UserDefined
     }
 
     private int[] numbers;
@@ -45,6 +46,11 @@ public class ModalData {
                 swap(a, b);
             }
         }
+    }
+
+    public ModalData(int[] numbers) {
+        this.numbers = numbers;
+        fixedPivots = new boolean[numbers.length];
     }
 
     public ModalData(int N, int randomBound){

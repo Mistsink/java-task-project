@@ -2,15 +2,18 @@ import java.awt.*;
 
 public class VisController {
 
-    private static int DELAY = 100;
+    private static int DELAY = 1;
+    private int N, sceneHeight;
+    ModalData.Type dataType;
 
     private ModalData data;
     private ViewFrame frame;
 
     public VisController(int sceneWidth, int sceneHeight, int N, ModalData.Type dataType){
 
-        data = new ModalData(N, sceneHeight, dataType);
-
+        this.N = N;
+        this.sceneHeight = sceneHeight;
+        this.dataType = dataType;
         /**
          * 初始化视图
          * 使用事件派发队列去更新视图，确保视图的安全
@@ -33,12 +36,20 @@ public class VisController {
     }
 
     private void run(){
-        updateData(-1, -1, -1, -1, -1, -1);
 
-        //  抽离出排序的主体逻辑
-        quickSort3Ways(0, data.N()-1);
+        while (true) {
 
-        updateData(-1, -1, -1, -1, -1, -1);
+            waitData();
+
+            updateData(-1, -1, -1, -1, -1, -1);
+
+            //  抽离出排序的主体逻辑
+            quickSort3Ways(0, data.N()-1);
+
+            updateData(-1, -1, -1, -1, -1, -1);
+
+            endSort();
+        }
     }
 
     /**
@@ -123,5 +134,28 @@ public class VisController {
 
         frame.render(data);
         VisUtil.pause(DELAY);
+    }
+
+
+    /**
+     * 等待用户选择需要排序的数据的生成方式
+     */
+    private void waitData() {
+        System.out.println("in wait");
+        while (!frame.ready){
+            VisUtil.pause(5);
+        }
+        System.out.println("out wait");
+        dataType = frame.dataType;
+
+        if (dataType == ModalData.Type.UserDefined)
+            data = frame.getData();
+        else
+            data = new ModalData(N, sceneHeight, dataType);
+    }
+
+    private void endSort() {
+        frame.ready = false;
+        data = new ModalData(new int[0]);
     }
 }
